@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大连市旅游接待人数分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(to right, #1a6fb0, #2c9cd4);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        .chart-container {
+            padding: 25px;
+            position: relative;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            gap: 15px;
+        }
+        .stat-box {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            flex: 1;
+            min-width: 150px;
+            border-top: 4px solid #2c9cd4;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a6fb0;
+            margin: 5px 0;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .footer {
+            text-align: center;
+            padding: 15px;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #eee;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .control-btn {
+            padding: 8px 15px;
+            background: #f0f7ff;
+            border: 1px solid #c3dfff;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #1a6fb0;
+            font-weight: 500;
+        }
+        .control-btn:hover {
+            background: #d9ebff;
+        }
+        .control-btn.active {
+            background: #1a6fb0;
+            color: white;
+            border-color: #1a6fb0;
+        }
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 22px;
+            }
+            .header p {
+                font-size: 14px;
+            }
+            .chart-container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>大连市旅游接待人数分析</h1>
+            <p>数据展示了2007年至2023年大连市旅游接待人数的变化趋势及同比增长情况，2023年旅游业呈现强劲复苏态势</p>
+        </div>
+
+        <div class="chart-container">
+            <div class="controls">
+                <button class="control-btn active" id="showAll">全部数据</button>
+                <button class="control-btn" id="showRecent">近五年</button>
+                <button class="control-btn" id="showGrowth">增长趋势</button>
+            </div>
+            <canvas id="tourismChart"></canvas>
+
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-label">2023年接待人数</div>
+                    <div class="stat-value">13,600万</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">2023年同比增长</div>
+                    <div class="stat-value">76.95%</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">历史最高年份</div>
+                    <div class="stat-value">2023年</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">2007-2023年增长</div>
+                    <div class="stat-value">430%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>数据来源：大连市旅游统计</p>
+        </div>
+    </div>
+
+    <script>
+        // 数据准备 - 已修正年份顺序
+        const years = [2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2022, 2023];
+        const visitors = [2564.00, 3095.00, 3517.00, 3893.70, 4377.60, 4943.30, 5349.90, 5716.40, 6926.60, 7738.20, 8516.40, 9398.40, 10382.70, 3997.30, 7685.70, 13600.00];
+        const growthRates = [null, 20.71, 13.63, 10.71, 12.43, 12.92, 8.23, 6.85, 21.17, 11.72, 10.06, 10.36, 10.47, -61.5, null, 76.95];
+
+        // 获取Canvas上下文
+        const ctx = document.getElementById('tourismChart').getContext('2d');
+
+        // 创建图表
+        let tourismChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: years,
+                datasets: [
+                    {
+                        label: '接待人数(万人次)',
+                        data: visitors,
+                        backgroundColor: years.map(year =>
+                            year === 2023 ? '#1a6fb0' :
+                            year === 2020 ? '#e74c3c' :
+                            year >= 2019 ? '#3498db' : '#a0d2ff'
+                        ),
+                        borderColor: years.map(year =>
+                            year === 2023 ? '#0d4d7a' :
+                            year === 2020 ? '#c0392b' :
+                            year >= 2019 ? '#2980b9' : '#7bb7f0'
+                        ),
+                        borderWidth: 1,
+                        yAxisID: 'y',
+                        order: 2
+                    },
+                    {
+                        label: '同比增长(%)',
+                        data: growthRates,
+                        type: 'line',
+                        borderColor: '#f39c12',
+                        backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: years.map(year =>
+                            year === 2023 ? '#e67e22' :
+                            year === 2020 ? '#e74c3c' : '#f39c12'
+                        ),
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: false,
+                        tension: 0.3,
+                        yAxisID: 'y1',
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '大连市旅游接待人数与同比增长趋势',
+                        font: {
+                            size: 18
+                        },
+                        padding: {
+                            bottom: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.datasetIndex === 0) {
+                                    label += context.parsed.y.toLocaleString() + ' 万人次';
+                                } else {
+                                    if (context.parsed.y === null) {
+                                        label += '暂无数据';
+                                    } else {
+                                        label += context.parsed.y + '%';
+                                    }
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: '年份'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: '接待人数(万人次)'
+                        },
+                        min: 0,
+                        max: 15000
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: '同比增长(%)'
+                        },
+                        min: -70,
+                        max: 90,
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                }
+            }
+        });
+
+        // 添加控制按钮功能
+        document.getElementById('showAll').addEventListener('click', function() {
+            setActiveButton(this);
+            tourismChart.data.labels = years;
+            tourismChart.data.datasets[0].data = visitors;
+            tourismChart.data.datasets[1].data = growthRates;
+            tourismChart.update();
+        });
+
+        document.getElementById('showRecent').addEventListener('click', function() {
+            setActiveButton(this);
+            // 取最后5个数据（近五年）
+            const recentYears = years.slice(-5);
+            const recentVisitors = visitors.slice(-5);
+            const recentGrowth = growthRates.slice(-5);
+
+            tourismChart.data.labels = recentYears;
+            tourismChart.data.datasets[0].data = recentVisitors;
+            tourismChart.data.datasets[1].data = recentGrowth;
+            tourismChart.options.scales.y.max = 15000;
+            tourismChart.update();
+        });
+
+        document.getElementById('showGrowth').addEventListener('click', function() {
+            setActiveButton(this);
+            tourismChart.data.labels = years;
+            tourismChart.data.datasets[0].data = visitors;
+            tourismChart.data.datasets[1].data = growthRates;
+            tourismChart.options.scales.y.max = 15000;
+            tourismChart.update();
+        });
+
+        function setActiveButton(activeBtn) {
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            activeBtn.classList.add('active');
+        }
+    </script>
+</body>
+</html>
